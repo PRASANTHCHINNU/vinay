@@ -1,0 +1,149 @@
+/* Import Inter font */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* Reset CSS */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #f8fafc;
+  color: #1e293b;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Better focus styles */
+:focus {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+/* Remove focus for mouse users */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Selection color */
+::selection {
+  background-color: #bfdbfe;
+  color: #1e3a8a;
+}
+
+/* Transition for all interactive elements */
+a, button, input, select, textarea {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Container padding for mobile */
+@media (max-width: 600px) {
+  .MuiContainer-root {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+}
+
+/* Better table styles */
+table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+}
+
+th, td {
+  border: 1px solid #e2e8f0;
+  padding: 12px;
+}
+
+th {
+  background-color: #f8fafc;
+  font-weight: 600;
+}
+
+/* Card hover effects */
+.MuiCard-root {
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.MuiCard-root:hover {
+  transform: translateY(-2px);
+}
+
+/* Form styles */
+.MuiTextField-root {
+  margin-bottom: 16px;
+}
+
+/* Button loading state */
+.MuiButton-root.loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+/* Alert styles */
+.MuiAlert-root {
+  border-radius: 8px;
+}
+
+/* Dialog styles */
+.MuiDialog-paper {
+  border-radius: 12px !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+}
+
+/* Tooltip styles */
+.MuiTooltip-tooltip {
+  border-radius: 4px !important;
+  font-size: 0.75rem !important;
+}
+
+/* Progress bar styles */
+.MuiLinearProgress-root {
+  border-radius: 4px;
+  height: 6px !important;
+}
+
+/* Chip styles */
+.MuiChip-root {
+  border-radius: 6px !important;
+}
+
+/* Badge styles */
+.MuiBadge-badge {
+  border-radius: 6px !important;
+  padding: 0 6px !important;
+}
+
+/* Menu item hover effect */
+.MuiMenuItem-root:hover {
+  background-color: #f1f5f9 !important;
+}
