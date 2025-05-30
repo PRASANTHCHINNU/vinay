@@ -117,14 +117,14 @@ router.post('/', auth, authorize('faculty', 'admin'), async (req, res) => {
     for (let i = 0; i < req.body.allowedGroups.length; i++) {
       const group = req.body.allowedGroups[i];
       if (!group.year || !group.department || !group.section || !group.semester ||
-          typeof group.year !== 'number' || group.year < 1 || group.year > 4 ||
-          typeof group.semester !== 'number' || group.semester < 1 || group.semester > 2) {
+          typeof group.year !== 'number' || group.year < 1 ||
+          typeof group.semester !== 'number' || group.semester < 1 || group.semester > 8) {
         console.log('Invalid group format:', {
           groupIndex: i,
           group: group,
           validationErrors: {
-            year: !group.year || typeof group.year !== 'number' || group.year < 1 || group.year > 4,
-            semester: !group.semester || typeof group.semester !== 'number' || group.semester < 1 || group.semester > 2,
+            year: !group.year || typeof group.year !== 'number' || group.year < 1,
+            semester: !group.semester || typeof group.semester !== 'number' || group.semester < 1 || group.semester > 8,
             department: !group.department,
             section: !group.section
           }
@@ -134,14 +134,18 @@ router.post('/', auth, authorize('faculty', 'admin'), async (req, res) => {
           message: 'Invalid allowed group format',
           groupIndex: i,
           expected: {
-            year: 'number (1-4)',
+            year: 'number (positive)',
             department: 'string',
             section: 'string',
-            semester: 'number (1-2)'
+            semester: 'number (1-8)'
           },
           received: group
         });
       }
+
+      // Convert year and semester to numbers if they're strings
+      group.year = Number(group.year);
+      group.semester = Number(group.semester);
     }
 
     // Validate questions array
@@ -206,19 +210,56 @@ router.get('/', auth, async (req, res) => {
     let query = {};
     
     if (req.user.role === 'student') {
-      // For students, only show available quizzes for their year and department
+      console.log('Fetching quizzes for student:', {
+        id: req.user._id,
+        name: req.user.name,
+        year: req.user.year,
+        department: req.user.department,
+        section: req.user.section,
+        semester: req.user.semester
+      });
+
+      // Get start of today
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      // For students, show available and upcoming quizzes for their year and department
       query = {
         isActive: true,
-        startTime: { $lte: new Date() },
-        endTime: { $gte: new Date() },
+        startTime: { $gte: today }, // Show quizzes starting from today
+        endTime: { $gte: new Date() }, // End time must be in the future
         allowedGroups: {
           $elemMatch: {
-            year: req.user.year,
+            year: Number(req.user.year),
             department: req.user.department,
             section: req.user.section
           }
         }
       };
+
+      console.log('Student quiz query:', JSON.stringify(query, null, 2));
+      console.log('Time values for query:', {
+        today: today,
+        now: new Date()
+      });
+      
+      // Debug: Log all quizzes before filtering
+      const allQuizzes = await Quiz.find({}).lean();
+      console.log('Total quizzes in system:', allQuizzes.length);
+      console.log('Sample quiz structure:', allQuizzes[0]?.allowedGroups);
+      
+      // Debug: Log matching quizzes with more details
+      const matchingQuizzes = await Quiz.find(query).lean();
+      console.log('Matching quizzes found:', matchingQuizzes.length);
+      
+      if (matchingQuizzes.length > 0) {
+        console.log('Found quizzes:', matchingQuizzes.map(quiz => ({
+          title: quiz.title,
+          startTime: quiz.startTime,
+          endTime: quiz.endTime,
+          status: quiz.startTime > new Date() ? 'upcoming' : 'active'
+        })));
+      }
     } else {
       // For faculty/admin, apply filters if provided
       if (department && department !== 'all') {

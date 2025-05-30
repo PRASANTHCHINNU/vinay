@@ -1062,6 +1062,21 @@ router.post('/academic-details/years-semesters', isAdmin, async (req, res) => {
       });
     }
 
+    // Validate that year is positive
+    if (year < 1) {
+      return res.status(400).json({
+        message: 'Year must be a positive number'
+      });
+    }
+
+    // Validate semester range (just ensure they are positive numbers)
+    const invalidSemesters = semesters.filter(sem => sem < 1);
+    if (invalidSemesters.length > 0) {
+      return res.status(400).json({
+        message: `Invalid semesters ${invalidSemesters.join(', ')}. Semesters must be positive numbers.`
+      });
+    }
+
     // Get all departments if not specified
     let departments = [];
     if (req.body.department) {
@@ -1071,27 +1086,38 @@ router.post('/academic-details/years-semesters', isAdmin, async (req, res) => {
       departments = allDepartments;
     }
 
+    if (departments.length === 0) {
+      return res.status(400).json({
+        message: 'No departments found. Please create at least one department first.'
+      });
+    }
+
     // Create or update academic details for each department and semester
     const results = await Promise.all(
       departments.flatMap(department =>
         semesters.map(async (semester) => {
-          return await AcademicDetail.findOneAndUpdate(
-            { department, year, semester },
-            { 
-              department,
-              year,
-              semester,
-              sections: 'A', // Default section
-              subjects: '',
-              credits: 3
-            },
-            { 
-              new: true, 
-              upsert: true, 
-              runValidators: true,
-              setDefaultsOnInsert: true 
-            }
-          );
+          try {
+            return await AcademicDetail.findOneAndUpdate(
+              { department, year, semester },
+              { 
+                department,
+                year,
+                semester,
+                sections: 'A', // Default section
+                subjects: '',
+                credits: 3
+              },
+              { 
+                new: true, 
+                upsert: true, 
+                runValidators: true,
+                setDefaultsOnInsert: true 
+              }
+            );
+          } catch (error) {
+            console.error(`Error creating/updating academic detail for ${department} year ${year} semester ${semester}:`, error);
+            throw new Error(`Failed to create/update academic detail for ${department} year ${year} semester ${semester}: ${error.message}`);
+          }
         })
       )
     );

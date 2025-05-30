@@ -12,7 +12,6 @@ import Navigation from './components/common/Navigation';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
 import Dashboard from './components/dashboard/Dashboard';
-import Navbar from './components/layout/Navbar';
 import QuizList from './components/quiz/QuizList';
 import QuizCreate from './components/quiz/QuizCreate';
 import QuizFileUpload from './components/quiz/QuizFileUpload';
@@ -35,6 +34,7 @@ import Profile from './components/profile/Profile';
 import StudentAccounts from './components/admin/StudentAccounts';
 import LandingPage from './components/LandingPage';
 import EventPage from './components/event/EventPage';
+import UpcomingQuizzes from './components/quiz/UpcomingQuizzes';
 
 // Create theme
 const theme = createTheme({
@@ -275,6 +275,8 @@ const AppRoutes = () => {
               <Routes>
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/quizzes" element={<QuizList />} />
+                <Route path="/upcoming-quizzes" element={<UpcomingQuizzes />} />
+                <Route path="/quizzes/:id/attempt" element={<QuizAttempt />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="*" element={<Navigate to="/student/dashboard" replace />} />
               </Routes>

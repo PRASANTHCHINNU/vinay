@@ -160,7 +160,10 @@ const QuizList = () => {
                 };
               }
               console.error(`Error fetching submission for quiz ${quiz._id}:`, err);
-              return null;
+              return {
+                quizId: quiz._id,
+                status: 'not_attempted'
+              };
             })
         );
         const submissions = await Promise.all(submissionPromises);
@@ -319,7 +322,19 @@ const QuizList = () => {
     const startTime = new Date(quiz.startTime);
     const endTime = new Date(quiz.endTime);
 
-    if (submission) {
+    console.log('Quiz Status Check:', {
+      quiz: quiz.title,
+      now: now.toISOString(),
+      startTime: startTime.toISOString(),
+      endTime: endTime.toISOString(),
+      isBeforeStart: now < startTime,
+      isDuringQuiz: now >= startTime && now <= endTime,
+      isAfterEnd: now > endTime,
+      hasSubmission: !!submission,
+      submissionStatus: submission?.status
+    });
+
+    if (submission && submission.status === 'evaluated') {
       return { label: 'Completed', color: 'success' };
     } else if (now < startTime) {
       return { label: 'Upcoming', color: 'info' };
@@ -404,13 +419,59 @@ const QuizList = () => {
   };
 
   const getFilteredQuizzes = () => {
+    console.log('Current pathname:', window.location.pathname);
+    console.log('All quizzes before filtering:', quizzes.map(q => ({
+      title: q.title,
+      startTime: q.startTime,
+      endTime: q.endTime
+    })));
+
     return quizzes.filter(quiz => {
-      const departmentMatch = !filters.department || quiz.department === filters.department;
-      const yearMatch = !filters.year || quiz.year === filters.year;
-      const semesterMatch = !filters.semester || quiz.semester === filters.semester;
-      const sectionMatch = !filters.section || quiz.section === filters.section;
-      const subjectMatch = !filters.subject || quiz.subject === filters.subject;
-      const statusMatch = !filters.status || quiz.status === filters.status;
+      const now = new Date();
+      const startTime = new Date(quiz.startTime);
+      const endTime = new Date(quiz.endTime);
+      
+      const isUpcoming = now < startTime;
+      const isActive = startTime <= now && now <= endTime;
+
+      console.log('Filtering quiz:', {
+        title: quiz.title,
+        now: now.toISOString(),
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
+        isUpcoming,
+        isActive,
+        pathname: window.location.pathname,
+        role: user.role
+      });
+
+      // For student view, filter based on route
+      if (user.role === 'student') {
+        const path = window.location.pathname;
+        const shouldShow = path === '/student/upcoming-quizzes' ? isUpcoming : isActive;
+        console.log('Student filter result:', {
+          quiz: quiz.title,
+          path,
+          isUpcoming,
+          isActive,
+          shouldShow
+        });
+        if (path === '/student/upcoming-quizzes') {
+          return isUpcoming;
+        } else if (path === '/student/quizzes') {
+          return isActive;
+        }
+      }
+
+      // For faculty/admin view, apply regular filters
+      const departmentMatch = !filters.department || quiz.allowedGroups.some(g => g.department === filters.department);
+      const yearMatch = !filters.year || quiz.allowedGroups.some(g => g.year === Number(filters.year));
+      const semesterMatch = !filters.semester || quiz.allowedGroups.some(g => g.semester === Number(filters.semester));
+      const sectionMatch = !filters.section || quiz.allowedGroups.some(g => g.section === filters.section);
+      const subjectMatch = !filters.subject || 
+        (quiz.subject?._id === filters.subject || quiz.subject?.code === filters.subject);
+      const statusMatch = !filters.status || getQuizStatus(quiz).label.toLowerCase() === filters.status.toLowerCase();
+      
       return departmentMatch && yearMatch && semesterMatch && sectionMatch && subjectMatch && statusMatch;
     });
   };
@@ -932,7 +993,14 @@ const QuizList = () => {
       }}
     >
       <Box sx={{ width: '100%', maxWidth: '1200px' }}>
-        <Typography variant="h4">Quizzes</Typography>
+        <Typography variant="h4">
+          {user.role === 'student' 
+            ? window.location.pathname === '/student/upcoming-quizzes'
+              ? 'Upcoming Quizzes'
+              : 'Available Quizzes'
+            : 'Quizzes'
+          }
+        </Typography>
         <br />
 
         {/* Show filters and statistics only for admin */}

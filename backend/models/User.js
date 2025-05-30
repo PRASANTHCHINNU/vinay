@@ -44,20 +44,7 @@ const UserSchema = new mongoose.Schema({
       return this.role === 'student';
     },
     min: 1,
-    max: 8,
-    validate: {
-      validator: function(v) {
-        if (this.role !== 'student') return true;
-        const yearSemesters = {
-          1: [1, 2],
-          2: [3, 4],
-          3: [5, 6],
-          4: [7, 8]
-        };
-        return yearSemesters[this.year]?.includes(v);
-      },
-      message: 'Semester must be valid for the selected year'
-    }
+    max: 8
   },
   section: {
     type: String,
@@ -98,9 +85,9 @@ const UserSchema = new mongoose.Schema({
     validate: {
       validator: function(v) {
         if (this.role !== 'faculty' && this.role !== 'event') return true;
-        return Array.isArray(v) && v.length > 0 && v.every(year => ['1', '2', '3', '4'].includes(year));
+        return Array.isArray(v) && v.length > 0;
       },
-      message: 'Must have at least one valid year (1-4)'
+      message: 'Must have at least one year'
     }
   },
   semesters: {
@@ -111,9 +98,9 @@ const UserSchema = new mongoose.Schema({
     validate: {
       validator: function(v) {
         if (this.role !== 'faculty' && this.role !== 'event') return true;
-        return Array.isArray(v) && v.length > 0 && v.every(sem => ['1', '2', '3', '4', '5', '6', '7', '8'].includes(sem));
+        return Array.isArray(v) && v.length > 0;
       },
-      message: 'Must have at least one valid semester (1-8)'
+      message: 'Must have at least one semester'
     }
   },
   sections: {
@@ -137,13 +124,11 @@ const UserSchema = new mongoose.Schema({
       },
       year: {
         type: String,
-        required: true,
-        enum: ['1', '2', '3', '4']
+        required: true
       },
       semester: {
         type: String,
-        required: true,
-        enum: ['1', '2', '3', '4', '5', '6', '7', '8']
+        required: true
       },
       sections: {
         type: [String],

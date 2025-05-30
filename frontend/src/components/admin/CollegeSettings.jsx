@@ -32,7 +32,8 @@ import {
   InputLabel,
   Select,
   Stack,
-  Tooltip
+  Tooltip,
+  Grid as MuiGrid
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -535,16 +536,13 @@ const CollegeSettings = () => {
   const getAvailableSemesters = (department, year) => {
     if (!department || !year) return [];
     
-    // Find the department's configuration
-    const departmentDetail = academicDetails.find(detail => detail.department === department);
-    if (!departmentDetail) return [];
-
-    // Find the year configuration
-    const yearConfig = departmentDetail.years?.find(y => y.year === Number(year));
-    if (!yearConfig) return [];
-
-    // Return array of semester numbers based on the configuration
-    return Array.from({ length: yearConfig.semesters }, (_, i) => i + 1);
+    // Get all semesters configured for this department and year
+    const semesters = academicDetails
+      .filter(detail => detail.department === department && detail.year === Number(year))
+      .map(detail => detail.semester)
+      .sort((a, b) => a - b);
+    
+    return semesters;
   };
 
   // Function to download department template
@@ -897,7 +895,7 @@ const CollegeSettings = () => {
                   label="Filter by Year"
                 >
                   <MenuItem value="">All Years</MenuItem>
-                  {[1, 2, 3, 4].map((year) => (
+                  {Array.from(new Set(academicDetails.map(detail => detail.year))).sort((a, b) => a - b).map((year) => (
                     <MenuItem key={year} value={year}>
                       Year {year}
                     </MenuItem>
@@ -1114,28 +1112,25 @@ const CollegeSettings = () => {
           <DialogContent>
             <Box sx={{ mt: 2 }}>
               <FormControl fullWidth margin="normal">
-                <InputLabel>Year</InputLabel>
-                <Select
+                <TextField
+                  fullWidth
+                  type="number"
+                  label="Year"
                   value={yearSemFormData.year}
                   onChange={(e) => setYearSemFormData({
                     ...yearSemFormData,
-                    year: e.target.value
+                    year: parseInt(e.target.value) || ''
                   })}
-                  label="Year"
-                >
-                  {[1, 2, 3, 4].map((year) => (
-                    <MenuItem key={year} value={year}>
-                      Year {year}
-                    </MenuItem>
-                  ))}
-                </Select>
+                  inputProps={{ min: 1 }}
+                  required
+                />
               </FormControl>
 
               <Typography variant="subtitle1" sx={{ mt: 2, mb: 1 }}>
                 Semesters
               </Typography>
               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                {[1, 2, 3].map((sem) => (
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
                   <Chip
                     key={sem}
                     label={`Semester ${sem}`}
@@ -1554,8 +1549,8 @@ const CollegeSettings = () => {
                     <Typography variant="subtitle1" gutterBottom>
                       Subject Details
                     </Typography>
-                    <Grid container spacing={2}>
-                      <Grid item xs={12} sm={6}>
+                    <MuiGrid container spacing={2}>
+                      <MuiGrid item xs={12} sm={6}>
                         <TextField
                           fullWidth
                           label="Subject Name"
@@ -1568,8 +1563,8 @@ const CollegeSettings = () => {
                           error={!subjectFormData.name}
                           helperText={!subjectFormData.name ? 'Subject name is required' : ''}
                         />
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
+                      </MuiGrid>
+                      <MuiGrid item xs={12} sm={6}>
                         <TextField
                           fullWidth
                           label="Subject Code"
@@ -1587,8 +1582,8 @@ const CollegeSettings = () => {
                           error={!subjectFormData.code}
                           helperText={!subjectFormData.code ? 'Subject code is required (Format: XX999)' : 'Format: XX999 (e.g., CS101)'}
                         />
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
+                      </MuiGrid>
+                      <MuiGrid item xs={12} sm={6}>
                         <TextField
                           fullWidth
                           label="Credits"
@@ -1600,8 +1595,32 @@ const CollegeSettings = () => {
                           })}
                           inputProps={{ min: 1, max: 6 }}
                         />
-                      </Grid>
-                      <Grid item xs={12}>
+                      </MuiGrid>
+                      <MuiGrid item xs={12} sm={6}>
+                        <TextField
+                          fullWidth
+                          label="Department"
+                          value={subjectFormData.department}
+                          disabled
+                        />
+                      </MuiGrid>
+                      <MuiGrid item xs={12} sm={6}>
+                        <TextField
+                          fullWidth
+                          label="Year"
+                          value={`Year ${subjectFormData.year}`}
+                          disabled
+                        />
+                      </MuiGrid>
+                      <MuiGrid item xs={12} sm={6}>
+                        <TextField
+                          fullWidth
+                          label="Semester"
+                          value={`Semester ${subjectFormData.semester}`}
+                          disabled
+                        />
+                      </MuiGrid>
+                      <MuiGrid item xs={12}>
                         <Button
                           variant="contained"
                           color="primary"
@@ -1610,8 +1629,8 @@ const CollegeSettings = () => {
                         >
                           {selectedSubject ? 'Update Subject' : 'Add Subject'}
                         </Button>
-                      </Grid>
-                    </Grid>
+                      </MuiGrid>
+                    </MuiGrid>
                   </Box>
                 )}
               </Box>

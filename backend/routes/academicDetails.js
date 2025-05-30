@@ -28,10 +28,21 @@ const upload = multer({
 });
 
 // Helper function to validate year-semester relationship
-const validateYearSemester = (year, semester) => {
-  const minSem = (year - 1) * 2 + 1;
-  const maxSem = year * 2;
-  return semester >= minSem && semester <= maxSem;
+const validateYearSemester = async (year, semester, department) => {
+  try {
+    // Find academic detail with this combination
+    const academicDetail = await AcademicDetail.findOne({
+      department,
+      year,
+      semester
+    });
+
+    // If we find a matching academic detail, this combination is valid
+    return !!academicDetail;
+  } catch (error) {
+    console.error('Error validating year-semester:', error);
+    return false;
+  }
 };
 
 // Public GET routes - No authentication required
@@ -197,9 +208,10 @@ router.post('/', auth, authorize('admin'), async (req, res) => {
     }
 
     // Validate year-semester relationship
-    if (!validateYearSemester(year, semester)) {
+    const isValidCombination = await validateYearSemester(year, semester, department);
+    if (!isValidCombination) {
       return res.status(400).json({
-        message: 'Invalid year-semester combination. Check that semester matches the year range.'
+        message: 'Invalid year-semester combination. This combination is not configured in academic details.'
       });
     }
 
@@ -245,9 +257,10 @@ router.put('/:id', auth, authorize('admin'), async (req, res) => {
     const { department, year, semester, sections, subjects, credits } = req.body;
 
     // Validate year-semester relationship
-    if (!validateYearSemester(year, semester)) {
+    const isValidCombination = await validateYearSemester(year, semester, department);
+    if (!isValidCombination) {
       return res.status(400).json({
-        message: 'Invalid year-semester combination. Check that semester matches the year range.'
+        message: 'Invalid year-semester combination. This combination is not configured in academic details.'
       });
     }
 
@@ -303,7 +316,8 @@ router.post('/upload', auth, authorize('admin'), upload.single('file'), async (r
         const semester = parseInt(row.Semester);
 
         // Validate year-semester relationship
-        if (!validateYearSemester(year, semester)) {
+        const isValidCombination = await validateYearSemester(year, semester, row.Department);
+        if (!isValidCombination) {
           throw new Error(`Invalid year-semester combination for ${row.Department} Year ${year} Semester ${semester}`);
         }
 

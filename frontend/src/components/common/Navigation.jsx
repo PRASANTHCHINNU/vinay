@@ -126,9 +126,9 @@ const Navigation = () => {
       icon: <QuizIcon />
     },
     {
-      title: 'My Submissions',
-      path: '/student/submissions',
-      icon: <AssignmentIcon />
+      title: 'Upcoming Quizzes',
+      path: '/student/upcoming-quizzes',
+      icon: <EventIcon />
     }
   ];
 

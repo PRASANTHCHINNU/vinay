@@ -8,33 +8,13 @@ const academicDetailSchema = new mongoose.Schema({
   year: {
     type: Number,
     required: true,
-    min: 1,
-    max: 4,
-    validate: {
-      validator: function(year) {
-        // Validate that year matches semester range
-        const sem = this.semester;
-        const validYear = Math.ceil(sem / 2);
-        return year === validYear;
-      },
-      message: 'Year must match the semester range (Year 1: Sem 1-2, Year 2: Sem 3-4, Year 3: Sem 5-6, Year 4: Sem 7-8)'
-    }
+    min: 1
   },
   semester: {
     type: Number,
     required: true,
     min: 1,
-    max: 8,
-    validate: {
-      validator: function(sem) {
-        // Validate semester is in correct range for year
-        const year = this.year;
-        const minSem = (year - 1) * 2 + 1;
-        const maxSem = year * 2;
-        return sem >= minSem && sem <= maxSem;
-      },
-      message: 'Semester must be within the valid range for the selected year'
-    }
+    max: 8
   },
   sections: {
     type: String,  // Store as comma-separated string: "A,B,C"
