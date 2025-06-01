@@ -34,7 +34,6 @@ import Profile from './components/profile/Profile';
 import StudentAccounts from './components/admin/StudentAccounts';
 import LandingPage from './components/LandingPage';
 import EventPage from './components/event/EventPage';
-import UpcomingQuizzes from './components/quiz/UpcomingQuizzes';
 
 // Create theme
 const theme = createTheme({
@@ -275,8 +274,9 @@ const AppRoutes = () => {
               <Routes>
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/quizzes" element={<QuizList />} />
-                <Route path="/upcoming-quizzes" element={<UpcomingQuizzes />} />
+                <Route path="/review-quizzes" element={<QuizList />} />
                 <Route path="/quizzes/:id/attempt" element={<QuizAttempt />} />
+                <Route path="/quizzes/:id/review" element={<QuizReview />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="*" element={<Navigate to="/student/dashboard" replace />} />
               </Routes>
@@ -295,6 +295,7 @@ const AppRoutes = () => {
                 <Route path="/quizzes/create" element={<QuizCreate />} />
                 <Route path="/quizzes/:id/edit" element={<QuizEdit />} />
                 <Route path="/quizzes/:id/submissions" element={<QuizSubmissions />} />
+                <Route path="/quizzes/:id/submissions/:studentId" element={<QuizReview />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="*" element={<Navigate to="/faculty/dashboard" replace />} />
               </Routes>

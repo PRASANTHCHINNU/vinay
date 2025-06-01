@@ -33,7 +33,8 @@ import {
   Person as PersonIcon,
   Add as AddIcon,
   Assignment as AssignmentIcon,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  Assessment as AssessmentIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 
@@ -126,9 +127,9 @@ const Navigation = () => {
       icon: <QuizIcon />
     },
     {
-      title: 'Upcoming Quizzes',
-      path: '/student/upcoming-quizzes',
-      icon: <EventIcon />
+      title: 'Review Quizzes',
+      path: '/student/review-quizzes',
+      icon: <AssessmentIcon />
     }
   ];
 
@@ -139,6 +140,18 @@ const Navigation = () => {
       : studentMenuItems;
 
   const handleNavigation = (path) => {
+    console.log('Navigation requested:', {
+      currentPath: location.pathname,
+      requestedPath: path,
+      userRole: user?.role,
+      userDetails: {
+        department: user?.department,
+        year: user?.year,
+        semester: user?.semester,
+        section: user?.section
+      }
+    });
+    
     if (location.pathname === path) {
       return;
     }

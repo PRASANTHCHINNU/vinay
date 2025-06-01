@@ -7,8 +7,34 @@ const api = axios.create({
     'Content-Type': 'application/json',
     'Accept': 'application/json'
   },
-  withCredentials: false
+  withCredentials:true
 });
+
+// Request interceptor to add auth token
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+      console.log('Request with auth:', {
+        url: config.url,
+        method: config.method,
+        hasToken: true,
+        tokenPreview: `${token.substring(0, 10)}...`
+      });
+    } else {
+      console.log('Request without auth token:', {
+        url: config.url,
+        method: config.method
+      });
+    }
+    return config;
+  },
+  (error) => {
+    console.error('Request interceptor error:', error);
+    return Promise.reject(error);
+  }
+);
 
 // Response interceptor
 api.interceptors.response.use(
@@ -16,6 +42,11 @@ api.interceptors.response.use(
     if (response.config.url.includes('/academic-details/faculty-structure')) {
       return response;
     }
+    console.log('Response success:', {
+      url: response.config.url,
+      status: response.status,
+      hasData: !!response.data
+    });
     return response.data || response;
   },
   (error) => {
@@ -38,6 +69,7 @@ api.interceptors.response.use(
     }
 
     if (error.response?.status === 401 || error.response?.status === 403) {
+      console.log('Auth error - clearing token and redirecting to login');
       localStorage.removeItem('token');
       window.location.href = '/login';
     }
@@ -46,30 +78,6 @@ api.interceptors.response.use(
       error.message = error.response.data.message;
     }
 
-    return Promise.reject(error);
-  }
-);
-
-// Request interceptor
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-
-    if (import.meta.env.MODE === 'development') {
-      console.log('API Request:', {
-        url: config.url,
-        method: config.method,
-        headers: config.headers
-      });
-    }
-
-    return config;
-  },
-  (error) => {
-    console.error('Request configuration error:', error);
     return Promise.reject(error);
   }
 );

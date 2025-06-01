@@ -219,14 +219,9 @@ router.get('/', auth, async (req, res) => {
         semester: req.user.semester
       });
 
-      // Get start of today
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
       // For students, show available and upcoming quizzes for their year and department
       query = {
         isActive: true,
-        startTime: { $gte: today }, // Show quizzes starting from today
         endTime: { $gte: new Date() }, // End time must be in the future
         allowedGroups: {
           $elemMatch: {
@@ -238,10 +233,6 @@ router.get('/', auth, async (req, res) => {
       };
 
       console.log('Student quiz query:', JSON.stringify(query, null, 2));
-      console.log('Time values for query:', {
-        today: today,
-        now: new Date()
-      });
       
       // Debug: Log all quizzes before filtering
       const allQuizzes = await Quiz.find({}).lean();
@@ -257,6 +248,7 @@ router.get('/', auth, async (req, res) => {
           title: quiz.title,
           startTime: quiz.startTime,
           endTime: quiz.endTime,
+          allowedGroups: quiz.allowedGroups,
           status: quiz.startTime > new Date() ? 'upcoming' : 'active'
         })));
       }
@@ -579,24 +571,58 @@ router.get('/:id', auth, async (req, res) => {
 // Start a quiz attempt
 router.post('/:id/start', auth, authorize('student'), async (req, res) => {
   try {
+    console.log('Starting quiz attempt:', {
+      quizId: req.params.id,
+      studentId: req.user._id,
+      studentDetails: {
+        department: req.user.department,
+        year: req.user.year,
+        section: req.user.section
+      }
+    });
+
     const quiz = await Quiz.findById(req.params.id);
     
     if (!quiz) {
+      console.log('Quiz not found:', req.params.id);
       return res.status(404).json({ message: 'Quiz not found' });
     }
 
     // Check if quiz is available
+    const now = new Date();
     const isAvailable = quiz.isActive &&
-      quiz.startTime <= new Date() &&
-      quiz.endTime >= new Date() &&
+      new Date(quiz.startTime) <= now &&
+      new Date(quiz.endTime) >= now &&
       quiz.allowedGroups.some(group =>
         group.year === req.user.year &&
         group.department === req.user.department &&
         group.section === req.user.section
       );
 
+    console.log('Quiz availability check:', {
+      quizId: quiz._id,
+      title: quiz.title,
+      isActive: quiz.isActive,
+      startTime: quiz.startTime,
+      endTime: quiz.endTime,
+      now: now,
+      userYear: req.user.year,
+      userDepartment: req.user.department,
+      userSection: req.user.section,
+      allowedGroups: quiz.allowedGroups,
+      isAvailable: isAvailable
+    });
+
     if (!isAvailable) {
-      return res.status(403).json({ message: 'Quiz not available' });
+      return res.status(403).json({ 
+        message: 'Quiz not available',
+        details: {
+          isActive: quiz.isActive,
+          startTime: quiz.startTime,
+          endTime: quiz.endTime,
+          allowedGroups: quiz.allowedGroups
+        }
+      });
     }
 
     // Check if student has already attempted the quiz
@@ -606,20 +632,42 @@ router.post('/:id/start', auth, authorize('student'), async (req, res) => {
     });
 
     if (existingAttempt) {
-      return res.status(400).json({ message: 'Quiz already attempted' });
+      console.log('Existing attempt found:', {
+        submissionId: existingAttempt._id,
+        status: existingAttempt.status,
+        startTime: existingAttempt.startTime
+      });
+      return res.status(400).json({ 
+        message: 'Quiz already attempted',
+        submissionId: existingAttempt._id,
+        status: existingAttempt.status
+      });
     }
 
     // Create new quiz submission
     const submission = new QuizSubmission({
       quiz: quiz._id,
       student: req.user._id,
-      startTime: new Date()
+      startTime: new Date(),
+      status: 'started'
     });
 
     await submission.save();
+    console.log('New submission created:', {
+      submissionId: submission._id,
+      quizId: quiz._id,
+      studentId: req.user._id,
+      startTime: submission.startTime
+    });
+
     res.status(201).json(submission);
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error('Error in quiz start:', error);
+    res.status(500).json({ 
+      message: 'Server error', 
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 

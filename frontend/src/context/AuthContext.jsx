@@ -20,11 +20,13 @@ export const AuthProvider = ({ children }) => {
       try {
         const token = localStorage.getItem('token');
         if (!token) {
+          console.log('No token found in localStorage');
           setUser(null);
           setLoading(false);
           return;
         }
 
+        console.log('Verifying token and fetching user data...');
         // Make API call to verify token and get user data
         const response = await api.get('/api/auth/me');
         
@@ -32,19 +34,31 @@ export const AuthProvider = ({ children }) => {
         const userData = response.data?.user || response.user;
         
         if (userData) {
+          console.log('User data received:', {
+            id: userData.id,
+            role: userData.role,
+            department: userData.department,
+            year: userData.year,
+            section: userData.section
+          });
           setUser(userData);
         } else {
+          console.log('No user data received, clearing auth state');
           // If no user data, clear token and user state
           localStorage.removeItem('token');
           setUser(null);
         }
       } catch (error) {
-        console.error('Auth check error:', error);
+        console.error('Auth check error:', {
+          message: error.message,
+          status: error.response?.status,
+          data: error.response?.data
+        });
         // Only clear auth if it's an auth error (401/403)
         if (error.response?.status === 401 || error.response?.status === 403) {
+          console.log('Auth error - clearing user state');
           localStorage.removeItem('token');
           setUser(null);
-          navigate('/login');
         }
         setAuthError(error.message);
       } finally {
@@ -53,6 +67,11 @@ export const AuthProvider = ({ children }) => {
     };
 
     checkAuth();
+
+    // Set up interval to periodically check token validity
+    const authCheckInterval = setInterval(checkAuth, 5 * 60 * 1000); // Check every 5 minutes
+
+    return () => clearInterval(authCheckInterval);
   }, [navigate]);
 
   const login = async (email, password) => {
@@ -60,6 +79,7 @@ export const AuthProvider = ({ children }) => {
       setAuthError(null);
       setLoading(true);
       
+      console.log('Attempting login for:', email);
       // Make the API request
       const response = await api.post('/api/auth/login', {
         email,
@@ -73,13 +93,25 @@ export const AuthProvider = ({ children }) => {
         throw new Error('Invalid credentials');
       }
       
+      console.log('Login successful:', {
+        userId: user.id,
+        role: user.role,
+        department: user.department,
+        year: user.year,
+        section: user.section
+      });
+      
       // Store token and update user state
       localStorage.setItem('token', token);
       setUser(user);
       
       return { success: true, user };
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('Login error:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data
+      });
       const errorMessage = error.response?.data?.message || error.message || 'Failed to login';
       setAuthError(errorMessage);
       return { success: false, error: errorMessage };
@@ -89,6 +121,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
+    console.log('Logging out user');
     localStorage.removeItem('token');
     setUser(null);
     navigate('/login');

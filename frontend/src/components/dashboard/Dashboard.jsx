@@ -50,7 +50,11 @@ const Dashboard = () => {
         // For students, fetch their submissions
         let submissions = [];
         if (user?.role === 'student' && quizzes.length > 0) {
-          const submissionPromises = quizzes.map(quiz =>
+          // First filter quizzes that might have submissions (past quizzes)
+          const now = new Date();
+          const pastQuizzes = quizzes.filter(quiz => new Date(quiz.endTime) < now);
+          
+          const submissionPromises = pastQuizzes.map(quiz =>
             api.get(`/api/quiz/${quiz._id}/submission`)
               .then(res => {
                 if (!res) return null;
@@ -64,7 +68,7 @@ const Dashboard = () => {
                 };
               })
               .catch((err) => {
-                // Silently handle 404 errors (no submission found)
+                // For 404, it means no submission was found
                 if (err.response?.status === 404) {
                   return {
                     quizId: quiz._id,
@@ -73,24 +77,46 @@ const Dashboard = () => {
                     totalScore: 0
                   };
                 }
-                // Log other errors but don't break the dashboard
                 console.error(`Error fetching submission for quiz ${quiz._id}:`, err);
                 return null;
               })
           );
           
           try {
-            submissions = (await Promise.all(submissionPromises))
-              .filter(sub => sub !== null)
+            // Get submissions for past quizzes
+            const pastSubmissions = (await Promise.all(submissionPromises))
+              .filter(sub => sub !== null);
+
+            // Add placeholder entries for ongoing and upcoming quizzes
+            const futureQuizzes = quizzes.filter(quiz => new Date(quiz.endTime) >= now)
+              .map(quiz => ({
+                quizId: quiz._id,
+                quiz: quiz,
+                status: new Date(quiz.startTime) > now ? 'upcoming' : 'ongoing',
+                totalScore: 0
+              }));
+
+            // Combine and sort all submissions
+            submissions = [...pastSubmissions, ...futureQuizzes]
               .sort((a, b) => {
-                // Sort by status (evaluated first, then not_attempted)
-                if (a.status === 'evaluated' && b.status !== 'evaluated') return -1;
-                if (b.status === 'evaluated' && a.status !== 'evaluated') return 1;
-                // For evaluated submissions, sort by submitTime
-                if (a.status === 'evaluated' && b.status === 'evaluated') {
+                // Sort by status priority
+                const statusPriority = {
+                  'evaluated': 1,
+                  'ongoing': 2,
+                  'upcoming': 3,
+                  'not_attempted': 4
+                };
+                
+                const statusDiff = statusPriority[a.status] - statusPriority[b.status];
+                if (statusDiff !== 0) return statusDiff;
+
+                // For same status, sort by date
+                if (a.status === 'evaluated' && a.submitTime && b.submitTime) {
                   return new Date(b.submitTime) - new Date(a.submitTime);
                 }
-                return 0;
+                
+                // For upcoming/ongoing, sort by start time
+                return new Date(a.quiz.startTime) - new Date(b.quiz.startTime);
               });
           } catch (error) {
             console.error('Error processing submissions:', error);
@@ -181,7 +207,21 @@ const Dashboard = () => {
             <CardContent>
               <Typography variant="h6">Upcoming</Typography>
               <Typography variant="h4">{stats.upcomingQuizzes}</Typography>
+              {stats.upcomingQuizzes > 0 && (
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                  Next quiz starts in {getNextQuizTime()}
+                </Typography>
+              )}
             </CardContent>
+            <CardActions>
+              <Button 
+                size="small" 
+                onClick={() => navigate('/student/upcoming-quizzes')}
+                sx={{ ml: 1 }}
+              >
+                View All
+              </Button>
+            </CardActions>
           </Card>
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
@@ -226,7 +266,7 @@ const Dashboard = () => {
                         <CardActions>
                           <Button 
                             size="small" 
-                            onClick={() => navigate(`/quizzes/${submission.quizId}/review`)}
+                            onClick={() => navigate(`/student/quizzes/${submission.quizId}/review`)}
                           >
                             View Details
                           </Button>
@@ -248,7 +288,7 @@ const Dashboard = () => {
           <Button
             variant="contained"
             color="primary"
-            onClick={() => navigate('/quizzes')}
+            onClick={() => navigate('/student/quizzes')}
           >
             View Available Quizzes
           </Button>
@@ -388,6 +428,28 @@ const Dashboard = () => {
         </Grid>
       </Grid>
     );
+  };
+
+  const getNextQuizTime = () => {
+    if (!stats.submissions || stats.submissions.length === 0) return '';
+    
+    const now = new Date();
+    const upcomingQuizzes = stats.submissions
+      .filter(sub => new Date(sub.quiz.startTime) > now)
+      .sort((a, b) => new Date(a.quiz.startTime) - new Date(b.quiz.startTime));
+      
+    if (upcomingQuizzes.length === 0) return '';
+    
+    const nextQuiz = upcomingQuizzes[0];
+    const timeUntilStart = new Date(nextQuiz.quiz.startTime) - now;
+    const hoursUntilStart = Math.floor(timeUntilStart / (1000 * 60 * 60));
+    const minutesUntilStart = Math.floor((timeUntilStart % (1000 * 60 * 60)) / (1000 * 60));
+    
+    if (hoursUntilStart > 24) {
+      const daysUntilStart = Math.floor(hoursUntilStart / 24);
+      return `${daysUntilStart} days`;
+    }
+    return `${hoursUntilStart}h ${minutesUntilStart}m`;
   };
 
   if (loading) {

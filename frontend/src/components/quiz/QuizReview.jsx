@@ -15,6 +15,7 @@ import {
   FormControl,
   Chip
 } from '@mui/material';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import api from '../../config/axios';
 import { useAuth } from '../../context/AuthContext';
 
@@ -151,6 +152,13 @@ const QuizReview = () => {
     <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
       <Paper sx={{ p: 3 }}>
         <Box sx={{ mb: 3 }}>
+          <Button
+            startIcon={<ArrowBackIcon />}
+            onClick={() => navigate(-1)}
+            sx={{ mb: 2 }}
+          >
+            Back
+          </Button>
           <Typography variant="h4" gutterBottom>
             Quiz Review: {quizData?.title || 'N/A'}
           </Typography>
@@ -287,9 +295,9 @@ const QuizReview = () => {
         <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between' }}>
           <Button
             variant="outlined"
-            onClick={() => navigate('/quizzes')}
+            onClick={() => navigate(-1)}
           >
-            Back to Quizzes
+            Back to Previous Page
           </Button>
         </Box>
       </Paper>

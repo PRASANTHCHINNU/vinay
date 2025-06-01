@@ -279,10 +279,10 @@ const QuizAuthorizedStudents = () => {
         <Box sx={{ mb: 3 }}>
           <Button
             startIcon={<ArrowBackIcon />}
-            onClick={() => navigate('/quizzes')}
+            onClick={() => navigate(-1)}
             sx={{ mb: 2 }}
           >
-            Back to Quizzes
+            Back
           </Button>
 
           <Typography variant="h4" gutterBottom>
@@ -471,7 +471,7 @@ const QuizAuthorizedStudents = () => {
                     <Button
                       size="small"
                       variant="outlined"
-                      onClick={() => navigate(`/quizzes/${id}/review/${studentData.student._id}`)}
+                      onClick={() => navigate(`/faculty/quizzes/${id}/submissions/${studentData.student._id}`)}
                       disabled={!studentData.hasSubmitted}
                     >
                       View Details

@@ -51,6 +51,7 @@ import FilterListIcon from '@mui/icons-material/FilterList';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import GroupIcon from '@mui/icons-material/Group';
 import ClassIcon from '@mui/icons-material/Class';
+import QuizIcon from '@mui/icons-material/Quiz';
 
 const COLORS = {
   excellent: '#4caf50',
@@ -59,6 +60,49 @@ const COLORS = {
   poor: '#f44336',
   submitted: '#4caf50',
   notSubmitted: '#f44336'
+};
+
+// Add CountdownTimer component
+const CountdownTimer = ({ startTime }) => {
+  const [timeLeft, setTimeLeft] = useState('');
+
+  useEffect(() => {
+    const calculateTimeLeft = () => {
+      const now = new Date().getTime();
+      const start = new Date(startTime).getTime();
+      const difference = start - now;
+
+      if (difference <= 0) {
+        setTimeLeft('Starting now...');
+        return;
+      }
+
+      const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+
+      let timeString = '';
+      if (days > 0) timeString += `${days}d `;
+      if (hours > 0) timeString += `${hours}h `;
+      if (minutes > 0) timeString += `${minutes}m `;
+      timeString += `${seconds}s`;
+
+      setTimeLeft(timeString);
+    };
+
+    calculateTimeLeft();
+    const timer = setInterval(calculateTimeLeft, 1000);
+
+    return () => clearInterval(timer);
+  }, [startTime]);
+
+  return (
+    <Typography variant="body2" color="textSecondary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+      <AccessTimeIcon fontSize="small" />
+      Starts in: {timeLeft}
+    </Typography>
+  );
 };
 
 const QuizList = () => {
@@ -334,8 +378,9 @@ const QuizList = () => {
       submissionStatus: submission?.status
     });
 
-    if (submission && submission.status === 'evaluated') {
-      return { label: 'Completed', color: 'success' };
+    // First check if there's a submission
+    if (submission && (submission.status === 'submitted' || submission.status === 'evaluated')) {
+      return { label: 'Submitted', color: 'success' };
     } else if (now < startTime) {
       return { label: 'Upcoming', color: 'info' };
     } else if (now > endTime) {
@@ -346,46 +391,48 @@ const QuizList = () => {
   };
 
   const getButtonConfig = (quiz, status, submission) => {
-    if (submission) {
+    const now = new Date().getTime();
+    const startTime = new Date(quiz.startTime).getTime();
+    const endTime = new Date(quiz.endTime).getTime();
+
+    // Check if quiz has been submitted
+    if (submission && (submission.status === 'submitted' || submission.status === 'evaluated')) {
       return {
-        text: 'Review Answers',
+        label: 'View Results',
+        color: 'info',
+        onClick: () => navigate(`/student/quizzes/${quiz._id}/review`),
         icon: <AssessmentIcon />,
-        action: () => navigate(`/quizzes/${quiz._id}/review`),
-        disabled: false,
-        color: 'primary'
+        isButton: true
       };
     }
 
-    switch (status.label) {
-      case 'Active':
-        return {
-          text: 'Start Quiz',
-          action: () => navigate(`/quizzes/${quiz._id}`),
-          disabled: false,
-          color: 'primary'
-        };
-      case 'Upcoming':
-        return {
-          text: 'Not Started Yet',
-          action: () => {},
-          disabled: true,
-          color: 'info'
-        };
-      case 'Expired':
-        return {
-          text: 'Quiz Expired',
-          action: () => {},
-          disabled: true,
-          color: 'error'
-        };
-      default:
-        return {
-          text: 'View Details',
-          action: () => navigate(`/quizzes/${quiz._id}`),
-          disabled: true,
-          color: 'default'
-        };
+    // Quiz hasn't started yet
+    if (now < startTime) {
+      return {
+        component: <CountdownTimer startTime={quiz.startTime} />,
+        isButton: false
+      };
     }
+
+    // Quiz is ongoing
+    if (now >= startTime && now <= endTime) {
+      return {
+        label: 'Start Quiz',
+        color: 'primary',
+        onClick: () => navigate(`/student/quizzes/${quiz._id}/attempt`),
+        icon: <QuizIcon />,
+        isButton: true
+      };
+    }
+
+    // Quiz has ended
+    return {
+      label: 'Expired',
+      color: 'error',
+      disabled: true,
+      icon: null,
+      isButton: true
+    };
   };
 
   const formatDateTime = (dateString) => {
@@ -430,9 +477,11 @@ const QuizList = () => {
       const now = new Date();
       const startTime = new Date(quiz.startTime);
       const endTime = new Date(quiz.endTime);
+      const submission = submissions[quiz._id];
       
       const isUpcoming = now < startTime;
-      const isActive = startTime <= now && now <= endTime;
+      const isActive = now >= startTime && now <= endTime;
+      const isSubmitted = submission && (submission.status === 'submitted' || submission.status === 'evaluated');
 
       console.log('Filtering quiz:', {
         title: quiz.title,
@@ -441,25 +490,21 @@ const QuizList = () => {
         endTime: endTime.toISOString(),
         isUpcoming,
         isActive,
+        isSubmitted,
         pathname: window.location.pathname,
         role: user.role
       });
 
       // For student view, filter based on route
       if (user.role === 'student') {
-        const path = window.location.pathname;
-        const shouldShow = path === '/student/upcoming-quizzes' ? isUpcoming : isActive;
-        console.log('Student filter result:', {
-          quiz: quiz.title,
-          path,
-          isUpcoming,
-          isActive,
-          shouldShow
-        });
-        if (path === '/student/upcoming-quizzes') {
-          return isUpcoming;
-        } else if (path === '/student/quizzes') {
-          return isActive;
+        if (window.location.pathname === '/student/review-quizzes') {
+          // Show only submitted quizzes in review page
+          return isSubmitted;
+        } else if (window.location.pathname === '/student/upcoming-quizzes') {
+          return isUpcoming && !isSubmitted;
+        } else if (window.location.pathname === '/student/quizzes') {
+          // Show active and upcoming quizzes that haven't been submitted
+          return (isActive || isUpcoming) && !isSubmitted;
         }
       }
 
@@ -843,8 +888,9 @@ const QuizList = () => {
   };
 
   const renderQuizCard = (quiz) => {
-    const status = getQuizStatus(quiz, submissions[quiz._id]);
-    const buttonConfig = getButtonConfig(quiz, status, submissions[quiz._id]);
+    const submission = submissions[quiz._id];
+    const status = getQuizStatus(quiz, submission);
+    const buttonConfig = getButtonConfig(quiz, status, submission);
 
     // Helper function to get subject display text
     const getSubjectDisplay = (subject) => {
@@ -947,17 +993,20 @@ const QuizList = () => {
               </Button>
             </Stack>
           ) : (
-            <Button
-              fullWidth
-              variant={buttonConfig.variant || 'contained'}
-              color={buttonConfig.color || 'primary'}
-              onClick={buttonConfig.action}
-              startIcon={buttonConfig.icon}
-              disabled={buttonConfig.disabled}
-              size="small"
-            >
-              {buttonConfig.text}
-            </Button>
+            buttonConfig.isButton ? (
+              <Button
+                fullWidth
+                variant="contained"
+                color={buttonConfig.color}
+                onClick={buttonConfig.onClick}
+                disabled={buttonConfig.disabled}
+                startIcon={buttonConfig.icon}
+              >
+                {buttonConfig.label}
+              </Button>
+            ) : (
+              buttonConfig.component
+            )
           )}
         </CardActions>
       </Card>
@@ -997,7 +1046,9 @@ const QuizList = () => {
           {user.role === 'student' 
             ? window.location.pathname === '/student/upcoming-quizzes'
               ? 'Upcoming Quizzes'
-              : 'Available Quizzes'
+              : window.location.pathname === '/student/review-quizzes'
+                ? 'Review Quizzes'
+                : 'Available Quizzes'
             : 'Quizzes'
           }
         </Typography>
